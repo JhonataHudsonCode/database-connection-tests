@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Validação de Conexões</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f3f6fb;
+            --surface: #ffffff;
+            --surface-soft: #f8fafc;
+            --text: #172033;
+            --muted: #667085;
+            --border: #e4e7ec;
+            --ok: #067647;
+            --ok-bg: #ecfdf3;
+            --error: #b42318;
+            --error-bg: #fef3f2;
+            --primary: #175cd3;
+            --shadow: 0 8px 30px rgba(16, 24, 40, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+                         "Segoe UI", sans-serif;
+        }
+
+        .container {
+            width: min(1500px, calc(100% - 40px));
+            margin: 36px auto;
+        }
+
+        .header {
+            margin-bottom: 28px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(26px, 3vw, 38px);
+            letter-spacing: -0.03em;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(150px, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .card, .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .card {
+            padding: 18px;
+        }
+
+        .card-label {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 9px;
+        }
+
+        .card-value {
+            font-size: 28px;
+            font-weight: 750;
+            letter-spacing: -0.03em;
+        }
+
+        .panel {
+            overflow: hidden;
+        }
+
+        .toolbar {
+            display: grid;
+            grid-template-columns: minmax(260px, 1fr) 180px 180px;
+            gap: 12px;
+            padding: 18px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        input, select {
+            width: 100%;
+            height: 42px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            padding: 0 12px;
+            color: var(--text);
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(23, 92, 211, 0.12);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1050px;
+        }
+
+        th {
+            background: var(--surface-soft);
+            color: #475467;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            text-align: left;
+            padding: 13px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+            font-size: 14px;
+        }
+
+        tbody tr:hover {
+            background: #fcfcfd;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 5px 9px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .badge-ok {
+            color: var(--ok);
+            background: var(--ok-bg);
+        }
+
+        .badge-error {
+            color: var(--error);
+            background: var(--error-bg);
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+        }
+
+        .error-message {
+            color: var(--error);
+            max-width: 420px;
+            word-break: break-word;
+        }
+
+        .muted { color: var(--muted); }
+
+        .empty {
+            padding: 28px;
+            text-align: center;
+            color: var(--muted);
+            display: none;
+        }
+
+        @media (max-width: 1000px) {
+            .cards { grid-template-columns: repeat(2, 1fr); }
+            .toolbar { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: min(100% - 20px, 1500px);
+                margin: 20px auto;
+            }
+
+            .cards { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <h1>Relatório de Validação de Conexões</h1>
+        <div class="subtitle">
+            Execução: {{ execution_date }} · PostgreSQL + OpenSearch
+        </div>
+    </header>
+
+    <section class="cards">
+        <div class="card">
+            <div class="card-label">Total</div>
+            <div class="card-value">{{ total }}</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Conexões OK</div>
+            <div class="card-value">{{ success }}</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Falhas</div>
+            <div class="card-value">{{ errors }}</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Taxa de sucesso</div>
+            <div class="card-value">{{ success_rate }}%</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Tempo médio</div>
+            <div class="card-value">{{ average_time }} ms</div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="toolbar">
+            <input
+                id="searchInput"
+                type="search"
+                placeholder="Buscar cliente, host, resposta ou erro..."
+                aria-label="Buscar"
+            >
+
+            <select id="databaseFilter" aria-label="Filtrar por banco">
+                <option value="">Todos os bancos</option>
+                <option value="postgres">PostgreSQL</option>
+                <option value="postgresql">PostgreSQL (postgresql)</option>
+                <option value="opensearch">OpenSearch</option>
+            </select>
+
+            <select id="statusFilter" aria-label="Filtrar por status">
+                <option value="">Todos os status</option>
+                <option value="OK">Somente OK</option>
+                <option value="ERROR">Somente erros</option>
+            </select>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Banco</th>
+                        <th>Host</th>
+                        <th>Porta</th>
+                        <th>Status</th>
+                        <th>Tempo</th>
+                        <th>Resposta</th>
+                        <th>Erro</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                {% for result in results %}
+                    <tr
+                        data-db="{{ result.db_type | lower }}"
+                        data-status="{{ result.status }}"
+                    >
+                        <td><strong>{{ result.client_name }}</strong></td>
+                        <td>{{ result.db_type }}</td>
+                        <td class="mono">{{ result.host }}</td>
+                        <td class="mono">{{ result.port }}</td>
+                        <td>
+                            {% if result.status == "OK" %}
+                                <span class="badge badge-ok">✓ OK</span>
+                            {% else %}
+                                <span class="badge badge-error">✕ ERRO</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ result.time_ms }} ms</td>
+                        <td>{{ result.response or "-" }}</td>
+                        <td class="error-message">{{ result.error or "-" }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="emptyState" class="empty">
+            Nenhum resultado corresponde aos filtros selecionados.
+        </div>
+    </section>
+</div>
+
+<script>
+    const searchInput = document.getElementById("searchInput");
+    const databaseFilter = document.getElementById("databaseFilter");
+    const statusFilter = document.getElementById("statusFilter");
+    const rows = Array.from(document.querySelectorAll("#resultsBody tr"));
+    const emptyState = document.getElementById("emptyState");
+
+    function applyFilters() {
+        const search = searchInput.value.trim().toLowerCase();
+        const database = databaseFilter.value.toLowerCase();
+        const status = statusFilter.value.toUpperCase();
+
+        let visible = 0;
+
+        rows.forEach((row) => {
+            const text = row.innerText.toLowerCase();
+            const rowDb = row.dataset.db.toLowerCase();
+            const rowStatus = row.dataset.status.toUpperCase();
+
+            const matchesSearch = !search || text.includes(search);
+            const matchesDb = !database || rowDb === database;
+            const matchesStatus = !status || rowStatus === status;
+
+            const show = matchesSearch && matchesDb && matchesStatus;
+            row.style.display = show ? "" : "none";
+
+            if (show) visible += 1;
+        });
+
+        emptyState.style.display = visible === 0 ? "block" : "none";
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+    databaseFilter.addEventListener("change", applyFilters);
+    statusFilter.addEventListener("change", applyFilters);
+</script>
+</body>
+</html>
