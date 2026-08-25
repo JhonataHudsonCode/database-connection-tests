@@ -9,7 +9,7 @@ REPORTS_DIR = ROOT_DIR / "reports"
 
 
 def generate_report(results: list[dict]) -> str:
-    """Gera um relatório HTML standalone com o resultado da execução."""
+    """Gera um relatório HTML standalone com o resultado da execuçãdo."""
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
     environment = Environment(
