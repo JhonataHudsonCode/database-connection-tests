@@ -26,6 +26,66 @@ def get_central_connection():
     )
 
 
+def _format_server_version(server_version: int) -> str:
+    major = server_version // 10000
+    minor = (server_version // 100) % 100
+    patch = server_version % 100
+
+    if major >= 10:
+        return f"{major}.{patch}"
+
+    return f"{major}.{minor}.{patch}"
+
+
+def _get_connection_details(connection) -> dict:
+    dsn_parameters = connection.get_dsn_parameters()
+    safe_dsn_keys = ("host", "port", "dbname", "user", "sslmode")
+    safe_dsn_parameters = {
+        key: dsn_parameters.get(key)
+        for key in safe_dsn_keys
+        if dsn_parameters.get(key)
+    }
+
+    return {
+        "dsn": safe_dsn_parameters,
+        "encoding": connection.encoding,
+        "protocol_version": connection.protocol_version,
+        "server_version": _format_server_version(connection.server_version),
+        "server_version_number": connection.server_version,
+        "status": connection.status,
+        "transaction_status": connection.get_transaction_status(),
+        "autocommit": connection.autocommit,
+        "readonly": connection.readonly,
+        "closed": bool(connection.closed),
+    }
+
+
+def validate_central_connection() -> dict:
+    """Valida apenas abertura de conexao, sem executar queries."""
+    connection = None
+
+    try:
+        connection = get_central_connection()
+        details = _get_connection_details(connection)
+
+        return {
+            "status": "OK",
+            "response": "conexao estabelecida",
+            "details": details,
+            "error": None,
+        }
+    except Exception as exc:
+        return {
+            "status": "ERROR",
+            "response": None,
+            "details": {},
+            "error": str(exc),
+        }
+    finally:
+        if connection is not None:
+            connection.close()
+
+
 def get_clients():
     """
     Busca no PostgreSQL central as credenciais dos bancos dos clientes.

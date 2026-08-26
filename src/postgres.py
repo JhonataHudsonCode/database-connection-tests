@@ -61,3 +61,61 @@ def test_postgres(config: dict) -> dict:
     finally:
         if connection is not None:
             connection.close()
+
+
+def list_postgres_databases(config: dict) -> dict:
+    """Lista bancos de dados visiveis na conexao PostgreSQL do cliente."""
+    start = time.perf_counter()
+    connection = None
+    sslmode = os.getenv("POSTGRES_CLIENT_SSLMODE", "").strip()
+
+    connection_args = {
+        "host": config["host"],
+        "port": int(config["port"]),
+        "database": config["database"],
+        "user": config["user"],
+        "password": config["password"],
+        "connect_timeout": int(os.getenv("CONNECTION_TIMEOUT_SECONDS", "10")),
+    }
+
+    if sslmode:
+        connection_args["sslmode"] = sslmode
+
+    try:
+        connection = psycopg2.connect(**connection_args)
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT datname
+                FROM pg_database
+                WHERE datistemplate = FALSE
+                ORDER BY datname
+                """
+            )
+            databases = [row[0] for row in cursor.fetchall()]
+
+        elapsed = (time.perf_counter() - start) * 1000
+
+        return {
+            "status": "OK",
+            "response": f"databases={', '.join(databases)}",
+            "time_ms": round(elapsed, 2),
+            "databases": databases,
+            "error": None,
+        }
+
+    except Exception as exc:
+        elapsed = (time.perf_counter() - start) * 1000
+
+        return {
+            "status": "ERROR",
+            "response": None,
+            "time_ms": round(elapsed, 2),
+            "databases": [],
+            "error": _redact_error(str(exc), config.get("password")),
+        }
+
+    finally:
+        if connection is not None:
+            connection.close()

@@ -89,3 +89,67 @@ def test_opensearch(config: dict) -> dict:
     finally:
         if client is not None:
             client.close()
+
+
+def list_opensearch_indices(config: dict) -> dict:
+    """Valida autenticacao no OpenSearch e lista indices visiveis."""
+    start = time.perf_counter()
+    client = None
+
+    use_ssl = _as_bool(os.getenv("OPENSEARCH_USE_SSL"), True)
+    verify_certs = _as_bool(os.getenv("OPENSEARCH_VERIFY_CERTS"), True)
+    ca_certs = os.getenv("OPENSEARCH_CA_CERTS", "").strip() or None
+
+    if use_ssl and not verify_certs:
+        warnings.filterwarnings("ignore", category=InsecureRequestWarning)
+
+    client_args = {
+        "hosts": [{"host": config["host"], "port": int(config["port"])}],
+        "http_auth": (config["user"], config["password"]),
+        "use_ssl": use_ssl,
+        "verify_certs": verify_certs,
+        "timeout": int(os.getenv("CONNECTION_TIMEOUT_SECONDS", "10")),
+    }
+
+    if ca_certs:
+        client_args["ca_certs"] = ca_certs
+
+    try:
+        client = OpenSearch(**client_args)
+
+        info = client.info()
+        cluster_name = info.get("cluster_name", "desconhecido")
+        indices_response = client.cat.indices(format="json")
+        indices = sorted(
+            item.get("index", "")
+            for item in indices_response
+            if item.get("index")
+        )
+
+        elapsed = (time.perf_counter() - start) * 1000
+
+        return {
+            "status": "OK",
+            "response": (
+                f"cluster={cluster_name} | "
+                f"indices={', '.join(indices) if indices else '<nenhum>'}"
+            ),
+            "time_ms": round(elapsed, 2),
+            "indices": indices,
+            "error": None,
+        }
+
+    except Exception as exc:
+        elapsed = (time.perf_counter() - start) * 1000
+
+        return {
+            "status": "ERROR",
+            "response": None,
+            "time_ms": round(elapsed, 2),
+            "indices": [],
+            "error": _redact_error(str(exc), config.get("password")),
+        }
+
+    finally:
+        if client is not None:
+            client.close()
